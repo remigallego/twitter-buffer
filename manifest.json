@@ -13,7 +13,7 @@
   "content_scripts": [
     {
       "matches": ["*://*.twitter.com/*"],
-      "js": ["jquery-2.2.4.min.js", "contentScript.js"]
+      "js": ["libs/jquery-2.2.4.min.js", "contentScript.js"]
     }
   ]
 }
