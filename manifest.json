@@ -4,7 +4,7 @@
   "version": "1.0",
   "manifest_version": 3,
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "scripts/background.js"
   },
   "action": {
     "default_popup": "popup.html"
@@ -13,7 +13,7 @@
   "content_scripts": [
     {
       "matches": ["*://*.twitter.com/*"],
-      "js": ["libs/jquery-2.2.4.min.js", "contentScript.js"]
+      "js": ["libs/jquery-2.2.4.min.js", "scripts/contentScript.js"]
     }
   ]
 }
