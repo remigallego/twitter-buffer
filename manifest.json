@@ -1,0 +1,19 @@
+{
+  "name": "Twitter Buffer",
+  "description": "",
+  "version": "1.0",
+  "manifest_version": 3,
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "permissions": ["storage", "activeTab", "scripting", "tabs"],
+  "content_scripts": [
+    {
+      "matches": ["*://*.twitter.com/*"],
+      "js": ["jquery-2.2.4.min.js", "contentScript.js"]
+    }
+  ]
+}
