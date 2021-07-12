@@ -1,6 +1,6 @@
 const isHomeUrl = (url) => url.slice(-4) === "home";
 const isComposeUrl = (url) => url.slice(-13) === "compose/tweet";
-const timeOut = 2;
+const timeOut = 2000;
 
 const homeTweetSelector =
   "#react-root > div > div > div.css-1dbjc4n.r-18u37iz.r-13qz1uu.r-417010 > main > div > div > div > div > div > div.css-1dbjc4n.r-kemksi.r-184en5c > div > div.css-1dbjc4n.r-kemksi.r-oyd9sg > div:nth-child(1) > div > div > div > div.css-1dbjc4n.r-1iusvr4.r-16y2uox.r-1777fci.r-1h8ys4a.r-1bylmt5.r-13tjlyg.r-7qyjyx.r-1ftll1t > div:nth-child(3) > div > div > div:nth-child(2) > div";
@@ -9,8 +9,15 @@ const composeTweetSelector =
 const tweetInputSelector =
   "#react-root > div > div > div.css-1dbjc4n.r-18u37iz.r-13qz1uu.r-417010 > main > div > div > div > div.css-1dbjc4n.r-kemksi.r-1kqtdi0.r-1ljd8xs.r-13l2t4g.r-1phboty.r-1jgb5lz.r-11wrixw.r-61z16t.r-1ye8kvj.r-13qz1uu.r-184en5c > div > div.css-1dbjc4n.r-kemksi.r-184en5c > div > div.css-1dbjc4n.r-kemksi.r-oyd9sg > div:nth-child(1) > div > div > div > div.css-1dbjc4n.r-1iusvr4.r-16y2uox.r-1777fci.r-1h8ys4a.r-1bylmt5.r-13tjlyg.r-7qyjyx.r-1ftll1t > div.css-1dbjc4n.r-184en5c > div > div > div > div > div > div > div > div > label > div.css-1dbjc4n.r-16y2uox.r-1wbh5a2 > div > div > div > div > div > div > div > div > div > span > span";
 
+const isTweetEmpty = () =>
+  !$(
+    "#react-root > div > div > div.css-1dbjc4n.r-18u37iz.r-13qz1uu.r-417010 > main > div > div > div > div > div > div.css-1dbjc4n.r-kemksi.r-184en5c > div > div.css-1dbjc4n.r-kemksi.r-oyd9sg > div:nth-child(1) > div > div > div > div.css-1dbjc4n.r-1iusvr4.r-16y2uox.r-1777fci.r-1h8ys4a.r-1bylmt5.r-13tjlyg.r-7qyjyx.r-1ftll1t > div:nth-child(3) > div > div > div:nth-child(2) > div.css-1dbjc4n.r-1awozwy.r-1777fci.r-ywje51.r-1vsu8ta.r-18qmn74"
+  ).length;
+
+const msToSecs = (ms) => ms / 1000;
+
 const elementReady = (selector) => {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const el = document.querySelector(selector);
     if (el) {
       resolve(el);
@@ -42,49 +49,79 @@ const createCloneElem = (element) => {
 };
 
 const handle = (element, selector) => {
-  let newClonedElem = createCloneElem(element);
-  let spanElement = newClonedElem.children[0].children[0].children[0];
+  let timeoutRunning = false;
+  let sendTweet = false;
+  let msLeft = timeOut;
+  let spanElement = element.children[0].children[0].children[0];
 
-  element.style.display = "none";
+  const spanElementText = spanElement.innerText;
+  const elementBgColor = element.style.backgroundColor;
 
-  const firstClickHandler = () => {
-    const cancelClickHandler = () => {
-      spanElement.innerText = "Cancelled!";
-      newClonedElem.style.backgroundColor = "red";
-      clearInterval(interval);
-      setTimeout(() => {
-        newClonedElem.style.backgroundColor = originalBackgroundColor;
-        spanElement.innerText = originalButtonText;
-        newClonedElem.addEventListener("click", firstClickHandler, {
-          once: true,
-        });
-      }, 500);
-    };
-    newClonedElem.addEventListener("click", cancelClickHandler, { once: true });
+  const updateText = (ms) =>
+    (spanElement.innerText = `${msToSecs(ms).toString()}s (Click to cancel)`);
 
-    const originalButtonText = spanElement.innerText;
-    const originalBackgroundColor = newClonedElem.style.backgroundColor;
+  $(selector).click((event) => {
+    if (isTweetEmpty()) return;
 
-    let secondsLeft = timeOut;
+    /* Click that sends tweet */
+    if (sendTweet) {
+      sendTweet = false;
+      return;
+    }
 
-    spanElement.innerText = `${secondsLeft.toString()}s (Click to cancel)`;
-    secondsLeft = secondsLeft - 1;
+    event.stopPropagation();
 
-    const interval = setInterval(() => {
-      spanElement.innerText = `${secondsLeft.toString()}s (Click to cancel)`;
-      secondsLeft = secondsLeft - 1;
-      if (secondsLeft === -1) {
+    /* Click that starts the timeout */
+    if (!timeoutRunning) {
+      timeoutRunning = true;
+      updateText(msLeft);
+
+      const interval = setInterval(() => {
+        if (!timeoutRunning) return handleCancel();
+
+        msLeft = msLeft - 1000;
+        updateText(msLeft);
+
+        if (msLeft < 0) {
+          timeoutRunning = false;
+          sendTweet = true;
+          $(selector).click();
+          clearInterval(interval);
+          setTimeout(() => {
+            msLeft = timeOut;
+            setTimeout(() => {
+              spanElement.innerText = spanElementText;
+              element.style.backgroundColor = elementBgColor;
+            }, 300);
+            elementReady(selector).then((el) => handle(el, selector));
+          }, 1000);
+        }
+      }, 1000);
+
+      const handleCancel = () => {
         clearInterval(interval);
-        element.click();
+        timeoutRunning = false;
+        sendTweet = false;
+        msLeft = timeOut;
         setTimeout(() => {
-          elementReady(selector).then((el) => handle(el, selector));
-        }, 1000);
-      }
-    }, 1000);
-  };
-  newClonedElem.addEventListener("click", firstClickHandler, { once: true });
+          spanElement.innerText = spanElementText;
+          element.style.backgroundColor = elementBgColor;
+        }, 300);
+      };
 
-  element.parentNode.appendChild(newClonedElem, element);
+      return;
+    }
+
+    /* Click that cancels the timeout */
+    if (timeoutRunning) {
+      timeoutRunning = false;
+      spanElement.innerText = "Cancelled!";
+      element.style.backgroundColor = "red";
+      return;
+    }
+  });
+
+  return;
 };
 
 chrome.runtime.onMessage.addListener((request) => {
@@ -99,9 +136,10 @@ chrome.runtime.onMessage.addListener((request) => {
       return elementReady(homeTweetSelector).then((el) => {
         return handle(el, homeTweetSelector);
       });
-    if (isComposeUrl(request.url))
+    if (isComposeUrl(request.url)) {
       return elementReady(composeTweetSelector).then((el) => {
         return handle(el, composeTweetSelector);
       });
+    }
   }
 });
